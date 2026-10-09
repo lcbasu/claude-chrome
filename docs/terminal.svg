@@ -13,12 +13,12 @@
     <text x="20" y="142" fill="#9198a1">hooked 5 launcher(s)</text>
 
     <text x="20" y="174"><tspan fill="#3fb950">$</tspan> claude-chrome list</text>
-    <text y="196" fill="#9198a1"><tspan x="20">SLUG</tspan><tspan x="240">CHROME_PROFILE</tspan><tspan x="430" fill="#9198a1">EXTENSION</tspan></text>
-    <text y="218" fill="#e6edf3"><tspan x="20">alice</tspan><tspan x="240">Claude Alice</tspan><tspan x="430" fill="#3fb950">installed</tspan></text>
-    <text y="240" fill="#e6edf3"><tspan x="20">bob</tspan><tspan x="240">Claude Bob</tspan><tspan x="430" fill="#3fb950">installed</tspan></text>
-    <text y="262" fill="#e6edf3"><tspan x="20">work01</tspan><tspan x="240">Claude Work 01</tspan><tspan x="430" fill="#3fb950">installed</tspan></text>
-    <text y="284" fill="#e6edf3"><tspan x="20">work02</tspan><tspan x="240">Claude Work 02</tspan><tspan x="430" fill="#d29922">missing</tspan></text>
-    <text y="306" fill="#e6edf3"><tspan x="20">research</tspan><tspan x="240">Claude Research</tspan><tspan x="430" fill="#9198a1">not created</tspan></text>
+    <text y="196" fill="#9198a1"><tspan x="20">SLUG</tspan><tspan x="190">CHROME_PROFILE</tspan><tspan x="380" fill="#9198a1">EXTENSION</tspan><tspan x="520" fill="#9198a1">PAIRED</tspan></text>
+    <text y="218" fill="#e6edf3"><tspan x="20">alice</tspan><tspan x="190">Claude Alice</tspan><tspan x="380" fill="#3fb950">installed</tspan><tspan x="520" fill="#3fb950">yes</tspan></text>
+    <text y="240" fill="#e6edf3"><tspan x="20">bob</tspan><tspan x="190">Claude Bob</tspan><tspan x="380" fill="#3fb950">installed</tspan><tspan x="520" fill="#3fb950">yes</tspan></text>
+    <text y="262" fill="#e6edf3"><tspan x="20">work01</tspan><tspan x="190">Claude Work 01</tspan><tspan x="380" fill="#3fb950">installed</tspan><tspan x="520" fill="#d29922">other browser</tspan></text>
+    <text y="284" fill="#e6edf3"><tspan x="20">work02</tspan><tspan x="190">Claude Work 02</tspan><tspan x="380" fill="#d29922">missing</tspan><tspan x="520" fill="#9198a1">no</tspan></text>
+    <text y="306" fill="#e6edf3"><tspan x="20">research</tspan><tspan x="190">Claude Research</tspan><tspan x="380" fill="#9198a1">not created</tspan><tspan x="520" fill="#9198a1">no</tspan></text>
 
     <text x="20" y="338"><tspan fill="#3fb950">$</tspan> claude-chrome setup work02<tspan fill="#9198a1" dx="16"># opens its Chrome on the extension page</tspan></text>
   </g>

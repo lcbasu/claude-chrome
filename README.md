@@ -45,7 +45,13 @@ Then, in each Chrome window that opened:
 2. Sign the extension into **that** profile's Claude account. Never sign it out.
 3. Sign in to the websites that account needs.
 
-Run one browser task from each Claude instance. It pairs with its Chrome and remembers it.
+Then pair each Claude instance once: in that instance, say **"switch browser"** and click **Connect** in its Chrome window. Claude saves that browser and picks it automatically from then on. `claude-chrome list` shows `PAIRED: yes` once this is done.
+
+| Claude picks… | when |
+|---|---|
+| the paired browser | it is connected — always wins |
+| the only browser | exactly one is signed into this account |
+| nothing, it asks | several are signed in and none is paired |
 
 If another Chrome profile's extension is still signed into one of these Claude accounts, sign it out there. Otherwise it competes for the same account.
 
@@ -54,7 +60,7 @@ If another Chrome profile's extension is still signed into one of these Claude a
 | Command | What it does |
 |---|---|
 | `init` | Adds a row to the map for every Claude Profiles app. Safe to re-run. |
-| `list` | Shows each profile and whether its Claude extension is installed. |
+| `list` | Shows each profile, whether its Claude extension is installed, and whether its Claude instance is paired to it. |
 | `open <slug>` | Opens that account's Chrome profile. |
 | `setup <slug>` | Opens it on the Claude extension's store page. |
 | `setup-all` | `setup` for every mapped profile. |

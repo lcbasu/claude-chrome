@@ -81,6 +81,18 @@ mkdir -p "$CLAUDE_CHROME_DATA/Claude alice/Extensions/fcoeoabgfenejglbffodgkkbkc
 check "list detects an installed extension" sh -c "'$CLI' list | grep -q 'alice.*installed'"
 check "list detects a missing extension" sh -c "'$CLI' list | grep -q 'work01.*missing'"
 
+# paired column: no config, paired to its own profile, paired elsewhere
+check "list shows unpaired instances" sh -c "'$CLI' list | grep -q 'work01 .*missing *no$'"
+EXT_STORE="$CLAUDE_CHROME_DATA/Claude alice/Local Extension Settings/fcoeoabgfenejglbffodgkkbkcdhcgfn"
+mkdir -p "$CLAUDE_CHROME_INSTANCES_DIR/alice" "$CLAUDE_CHROME_INSTANCES_DIR/work01" "$EXT_STORE"
+printf 'x"deviceId":"dev-alice-1"x' > "$EXT_STORE/000003.log"
+printf '{\n  "preferences": {\n    "chromeExtension": {\n      "pairedDeviceId": "dev-alice-1"\n    }\n  }\n}\n' \
+    > "$CLAUDE_CHROME_INSTANCES_DIR/alice/claude_desktop_config.json"
+printf '{"preferences":{"chromeExtension":{"pairedDeviceId":"dev-someone-else"}}}' \
+    > "$CLAUDE_CHROME_INSTANCES_DIR/work01/claude_desktop_config.json"
+check "list shows a pairing to its own profile" sh -c "'$CLI' list | grep -q 'alice .*installed *yes$'"
+check "list flags a pairing to another browser" sh -c "'$CLI' list | grep -q 'work01 .*other browser$'"
+
 # install / uninstall
 "$CLI" install >/dev/null
 check "install hooks every launcher" test "$(grep -l 'claude-chrome hook' "$CLAUDE_CHROME_APPS_DIR"/*/Contents/MacOS/launcher | wc -l)" -eq 2

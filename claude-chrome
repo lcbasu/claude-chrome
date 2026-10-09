@@ -10,7 +10,7 @@
 #
 # Usage:
 #   claude-chrome init             add a map row for every Claude Profiles app
-#   claude-chrome list             show the map and extension status
+#   claude-chrome list             show the map, extension and pairing status
 #   claude-chrome open <slug>      open that profile's Chrome window
 #   claude-chrome setup <slug>     open it on the Claude extension's store page
 #   claude-chrome setup-all        the same, for every mapped profile
@@ -18,7 +18,7 @@
 #   claude-chrome uninstall        remove the hooks
 set -u
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 INSTANCES_DIR="${CLAUDE_CHROME_INSTANCES_DIR:-$HOME/.claude-instances}"
 MAP="${CLAUDE_CHROME_MAP:-$INSTANCES_DIR/chrome-map.tsv}"
 APPS_DIR="${CLAUDE_CHROME_APPS_DIR:-$HOME/Applications}"
@@ -95,14 +95,27 @@ cmd_init() {
     printf 'added %d profile(s) to %s\n' "$added" "$MAP"
 }
 
+paired_device() {  # deviceId this Claude instance saved via Connect, or nothing
+    sed -n 's/.*"pairedDeviceId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+        "$INSTANCES_DIR/$1/claude_desktop_config.json" 2>/dev/null | head -n 1
+}
+
+paired_status() {  # $1 slug, $2 chrome profile dir -> yes | other browser | no
+    local id
+    id=$(paired_device "$1")
+    if [ -z "$id" ]; then printf 'no'
+    elif grep -r -a -q -F "$id" "$CHROME_DATA/$2/Local Extension Settings/$EXT_ID" 2>/dev/null; then printf 'yes'
+    else printf 'other browser'; fi
+}
+
 cmd_list() {
     local slug dir name ext
-    printf '%-28s %-22s %s\n' SLUG CHROME_PROFILE EXTENSION
+    printf '%-28s %-22s %-12s %s\n' SLUG CHROME_PROFILE EXTENSION PAIRED
     while IFS=$'\t' read -r slug dir name; do
         if [ ! -d "$CHROME_DATA/$dir" ]; then ext="not created"
         elif [ -d "$CHROME_DATA/$dir/Extensions/$EXT_ID" ]; then ext="installed"
         else ext="missing"; fi
-        printf '%-28s %-22s %s\n' "$slug" "$name" "$ext"
+        printf '%-28s %-22s %-12s %s\n' "$slug" "$name" "$ext" "$(paired_status "$slug" "$dir")"
     done <<EOF
 $(map_rows)
 EOF

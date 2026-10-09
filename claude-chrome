@@ -1,0 +1,168 @@
+#!/bin/bash
+# claude-chrome — pin every Claude Desktop profile to its own Chrome profile.
+# https://github.com/lcbasu/claude-chrome — MIT License.
+#
+# Claude Desktop instances started with --user-data-dir (e.g. by Claude Profiles)
+# reach Chrome only through Anthropic's hosted bridge, which matches by the
+# Claude account the Chrome extension is signed into. One Chrome profile holds
+# one extension, signed into one account. So: one Chrome profile per Claude
+# account, signed in once, opened automatically next to its Claude instance.
+#
+# Usage:
+#   claude-chrome init             add a map row for every Claude Profiles app
+#   claude-chrome list             show the map and extension status
+#   claude-chrome open <slug>      open that profile's Chrome window
+#   claude-chrome setup <slug>     open it on the Claude extension's store page
+#   claude-chrome setup-all        the same, for every mapped profile
+#   claude-chrome install          hook every Claude Profiles launcher
+#   claude-chrome uninstall        remove the hooks
+set -u
+
+VERSION="0.1.0"
+INSTANCES_DIR="${CLAUDE_CHROME_INSTANCES_DIR:-$HOME/.claude-instances}"
+MAP="${CLAUDE_CHROME_MAP:-$INSTANCES_DIR/chrome-map.tsv}"
+APPS_DIR="${CLAUDE_CHROME_APPS_DIR:-$HOME/Applications}"
+CHROME_APP="${CLAUDE_CHROME_APP:-/Applications/Google Chrome.app}"
+CHROME_DATA="${CLAUDE_CHROME_DATA:-$HOME/Library/Application Support/Google/Chrome}"
+OPEN_BIN="${CLAUDE_CHROME_OPEN:-/usr/bin/open}"
+BUNDLE_ID_PREFIX="local.claude-profiles"
+EXT_ID="fcoeoabgfenejglbffodgkkbkcdhcgfn"
+EXT_URL="https://chromewebstore.google.com/detail/claude/$EXT_ID"
+HOOK_MARK="# claude-chrome hook"
+# shellcheck disable=SC2016  # literal text of the Claude Profiles launch line
+LAUNCH_LINE='exec /usr/bin/open -n -a "$CLAUDE_APP"'
+
+die() { printf 'claude-chrome: %s\n' "$*" >&2; exit 1; }
+
+self_path() {  # absolute path of this script, so hooks survive a different install dir
+    local p="$0"
+    case "$p" in /*) ;; *) p="$PWD/$p" ;; esac
+    printf '%s' "$p"
+}
+
+map_rows() {  # "slug<TAB>dir<TAB>name" lines, comments and blanks skipped
+    [ -f "$MAP" ] || die "no map at $MAP — run: claude-chrome init"
+    awk -F'\t' '!/^#/ && NF >= 3' "$MAP"
+}
+
+lookup() { map_rows | awk -F'\t' -v s="$1" '$1==s {print $2 "\t" $3; exit}'; }
+
+json_string() { printf '"%s"' "$(printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"; }
+
+seed_profile() {  # name a brand-new Chrome profile before its first launch
+    local dir="$CHROME_DATA/$1"
+    [ -e "$dir" ] && return 0
+    mkdir -p "$dir" || die "cannot create $dir"
+    printf '{"profile":{"name":%s}}\n' "$(json_string "$2")" > "$dir/Preferences"
+}
+
+open_profile() {  # $1 slug, $2 optional url
+    local row dir name
+    row=$(lookup "$1")
+    [ -n "$row" ] || die "'$1' is not in $MAP"
+    dir=${row%%$'\t'*}; name=${row#*$'\t'}
+    seed_profile "$dir" "$name"
+    # -n: without it, macOS drops the args when Chrome is already running.
+    "$OPEN_BIN" -n -a "$CHROME_APP" --args --profile-directory="$dir" ${2:+"$2"}
+}
+
+plist_get() {  # $1 app, $2 key — `defaults` on macOS, XML fallback elsewhere (tests/CI)
+    if command -v defaults >/dev/null 2>&1; then
+        defaults read "$1/Contents/Info" "$2" 2>/dev/null
+    else
+        sed -n "s:.*<key>$2</key><string>\\([^<]*\\)</string>.*:\\1:p" "$1/Contents/Info.plist" 2>/dev/null
+    fi
+}
+
+wrapper_slug() {  # Claude Profiles wrapper app -> slug, or nothing
+    local id
+    id=$(plist_get "$1" CFBundleIdentifier)
+    case "$id" in "$BUNDLE_ID_PREFIX".*) printf '%s' "${id#"$BUNDLE_ID_PREFIX".}" ;; esac
+}
+
+cmd_init() {
+    local app slug name added=0
+    mkdir -p "$(dirname "$MAP")"
+    [ -f "$MAP" ] || printf '# slug\tchrome profile dir\tchrome profile name   (tab-separated)\n' > "$MAP"
+    for app in "$APPS_DIR"/*.app; do
+        [ -d "$app" ] || continue
+        slug=$(wrapper_slug "$app"); [ -n "$slug" ] || continue
+        [ -n "$(lookup "$slug")" ] && continue
+        name=$(plist_get "$app" CFBundleDisplayName); [ -n "$name" ] || name="Claude $slug"
+        printf '%s\tClaude %s\t%s\n' "$slug" "$slug" "$name" >> "$MAP"
+        added=$((added + 1))
+    done
+    printf 'added %d profile(s) to %s\n' "$added" "$MAP"
+}
+
+cmd_list() {
+    local slug dir name ext
+    printf '%-28s %-22s %s\n' SLUG CHROME_PROFILE EXTENSION
+    while IFS=$'\t' read -r slug dir name; do
+        if [ ! -d "$CHROME_DATA/$dir" ]; then ext="not created"
+        elif [ -d "$CHROME_DATA/$dir/Extensions/$EXT_ID" ]; then ext="installed"
+        else ext="missing"; fi
+        printf '%-28s %-22s %s\n' "$slug" "$name" "$ext"
+    done <<EOF
+$(map_rows)
+EOF
+}
+
+cmd_setup_all() {
+    local slug
+    for slug in $(map_rows | cut -f1); do
+        open_profile "$slug" "$EXT_URL"
+        sleep 1  # let Chrome settle between profile launches
+    done
+}
+
+# shellcheck disable=SC2016  # $DATA_DIR must expand inside the launcher, not here
+hook_line() { printf '[ -x "%s" ] && "%s" open "$(basename "$DATA_DIR")" >/dev/null 2>&1 %s' "$1" "$1" "$HOOK_MARK"; }
+
+launchers() { for f in "$APPS_DIR"/*.app/Contents/MacOS/launcher; do [ -f "$f" ] && printf '%s\n' "$f"; done; }
+
+cmd_install() {
+    local self f tmp n=0 line
+    self=$(self_path); line=$(hook_line "$self")
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        grep -q "$HOOK_MARK" "$f" && continue
+        grep -qF "$LAUNCH_LINE" "$f" || continue
+        tmp=$(mktemp) || die "mktemp failed"
+        # Insert the hook right before Claude launches; the slug is the data dir name.
+        HOOK="$line" LIT="$LAUNCH_LINE" awk 'index($0, ENVIRON["LIT"]) == 1 {print ENVIRON["HOOK"]} {print}' "$f" > "$tmp" \
+            && cat "$tmp" > "$f"  # cat keeps the file's mode and inode
+        rm -f "$tmp"
+        n=$((n + 1))
+    done <<EOF
+$(launchers)
+EOF
+    printf 'hooked %d launcher(s)\n' "$n"
+}
+
+cmd_uninstall() {
+    local f tmp n=0
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        grep -q "$HOOK_MARK" "$f" || continue
+        tmp=$(mktemp) || die "mktemp failed"
+        grep -v "$HOOK_MARK" "$f" > "$tmp" && cat "$tmp" > "$f"
+        rm -f "$tmp"
+        n=$((n + 1))
+    done <<EOF
+$(launchers)
+EOF
+    printf 'unhooked %d launcher(s)\n' "$n"
+}
+
+case "${1:-}" in
+    init)      cmd_init ;;
+    list)      cmd_list ;;
+    open)      open_profile "${2:?usage: claude-chrome open <slug>}" ;;
+    setup)     open_profile "${2:?usage: claude-chrome setup <slug>}" "$EXT_URL" ;;
+    setup-all) cmd_setup_all ;;
+    install)   cmd_install ;;
+    uninstall) cmd_uninstall ;;
+    version|--version|-v) printf '%s\n' "$VERSION" ;;
+    *) sed -n '/^# Usage:/,/^set -u/p' "$0" | sed -e '$d' -e 's/^# \{0,1\}//'; [ $# -eq 0 ] || [ "$1" = help ] || [ "$1" = --help ] || exit 2 ;;
+esac

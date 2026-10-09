@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" width="880" height="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <style>
+    .bg { fill: #ffffff; }
+    .panel { fill: #f6f8fa; stroke: #d0d7de; }
+    .h { fill: #1f2328; font-size: 17px; font-weight: 600; }
+    .sub { fill: #59636e; font-size: 12.5px; }
+    .node { fill: #ffffff; stroke: #d0d7de; }
+    .claude { fill: #fbeee8; stroke: #d97757; }
+    .chrome { fill: #eaf2fd; stroke: #4a7fd4; }
+    .t { fill: #1f2328; font-size: 13px; }
+    .tm { fill: #59636e; font-size: 11.5px; }
+    .bad { stroke: #cf222e; }
+    .good { stroke: #1a7f37; }
+    .badt { fill: #cf222e; font-size: 12px; font-weight: 600; }
+    .goodt { fill: #1a7f37; font-size: 12px; font-weight: 600; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .panel { fill: #161b22; stroke: #30363d; }
+      .h, .t { fill: #e6edf3; }
+      .sub, .tm { fill: #9198a1; }
+      .claude { fill: #3a2219; stroke: #d97757; }
+      .chrome { fill: #14243d; stroke: #5b8fe0; }
+      .bad { stroke: #f85149; } .badt { fill: #f85149; }
+      .good { stroke: #3fb950; } .goodt { fill: #3fb950; }
+    }
+  </style>
+  <defs>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#cf222e"/></marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1a7f37"/></marker>
+  </defs>
+  <rect class="bg" width="880" height="400" rx="12"/>
+
+  <!-- BEFORE -->
+  <rect class="panel" x="16" y="16" width="416" height="368" rx="10"/>
+  <text class="h" x="36" y="48">Before</text>
+  <text class="sub" x="36" y="68">One Chrome profile, re-signed into whichever account is working</text>
+
+  <rect class="claude" x="36" y="96" width="150" height="44" rx="8"/><text class="t" x="52" y="123">Claude · alice</text>
+  <rect class="claude" x="36" y="160" width="150" height="44" rx="8"/><text class="t" x="52" y="187">Claude · work-01</text>
+  <rect class="claude" x="36" y="224" width="150" height="44" rx="8"/><text class="t" x="52" y="251">Claude · work-02</text>
+
+  <rect class="chrome" x="262" y="150" width="150" height="64" rx="8"/>
+  <text class="t" x="278" y="176">Chrome · Default</text>
+  <text class="tm" x="278" y="196">signed in as work-01</text>
+
+  <path class="bad" d="M186 118 C 225 118, 225 170, 258 172" fill="none" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#ab)"/>
+  <path class="good" d="M186 182 L 258 182" fill="none" stroke-width="1.8" marker-end="url(#ag)"/>
+  <path class="bad" d="M186 246 C 225 246, 225 194, 258 192" fill="none" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#ab)"/>
+
+  <text class="badt" x="36" y="306">✕ alice, work-02 can't reach Chrome</text>
+  <text class="badt" x="36" y="328">✕ sign out → sign in to switch accounts</text>
+  <text class="badt" x="36" y="350">✕ the wrong session gets the browser</text>
+
+  <!-- AFTER -->
+  <rect class="panel" x="448" y="16" width="416" height="368" rx="10"/>
+  <text class="h" x="468" y="48">After claude-chrome</text>
+  <text class="sub" x="468" y="68">One Chrome profile per account, opened with its Claude</text>
+
+  <rect class="claude" x="468" y="96" width="150" height="44" rx="8"/><text class="t" x="484" y="123">Claude · alice</text>
+  <rect class="claude" x="468" y="160" width="150" height="44" rx="8"/><text class="t" x="484" y="187">Claude · work-01</text>
+  <rect class="claude" x="468" y="224" width="150" height="44" rx="8"/><text class="t" x="484" y="251">Claude · work-02</text>
+
+  <rect class="chrome" x="694" y="96" width="150" height="44" rx="8"/><text class="t" x="710" y="123">Chrome · alice</text>
+  <rect class="chrome" x="694" y="160" width="150" height="44" rx="8"/><text class="t" x="710" y="187">Chrome · work-01</text>
+  <rect class="chrome" x="694" y="224" width="150" height="44" rx="8"/><text class="t" x="710" y="251">Chrome · work-02</text>
+
+  <path class="good" d="M618 118 L 690 118" fill="none" stroke-width="1.8" marker-end="url(#ag)"/>
+  <path class="good" d="M618 182 L 690 182" fill="none" stroke-width="1.8" marker-end="url(#ag)"/>
+  <path class="good" d="M618 246 L 690 246" fill="none" stroke-width="1.8" marker-end="url(#ag)"/>
+
+  <text class="goodt" x="468" y="306">✓ every account has its own browser</text>
+  <text class="goodt" x="468" y="328">✓ sign in once, never switch again</text>
+  <text class="goodt" x="468" y="350">✓ opens automatically with each profile</text>
+</svg>

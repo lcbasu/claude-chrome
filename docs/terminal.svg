@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" width="760" height="360" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5">
+  <rect width="760" height="360" rx="12" fill="#161b22"/>
+  <rect width="760" height="36" rx="12" fill="#21262d"/>
+  <rect y="24" width="760" height="12" fill="#21262d"/>
+  <circle cx="22" cy="18" r="6" fill="#ff5f57"/><circle cx="42" cy="18" r="6" fill="#febc2e"/><circle cx="62" cy="18" r="6" fill="#28c840"/>
+  <text x="380" y="23" fill="#9198a1" font-size="12" text-anchor="middle">Terminal</text>
+
+  <g fill="#e6edf3" xml:space="preserve" style="white-space: pre">
+    <text x="20" y="66"><tspan fill="#3fb950">$</tspan> claude-chrome init</text>
+    <text x="20" y="88" fill="#9198a1">added 5 profile(s) to ~/.claude-instances/chrome-map.tsv</text>
+
+    <text x="20" y="120"><tspan fill="#3fb950">$</tspan> claude-chrome install</text>
+    <text x="20" y="142" fill="#9198a1">hooked 5 launcher(s)</text>
+
+    <text x="20" y="174"><tspan fill="#3fb950">$</tspan> claude-chrome list</text>
+    <text y="196" fill="#9198a1"><tspan x="20">SLUG</tspan><tspan x="240">CHROME_PROFILE</tspan><tspan x="430" fill="#9198a1">EXTENSION</tspan></text>
+    <text y="218" fill="#e6edf3"><tspan x="20">alice</tspan><tspan x="240">Claude Alice</tspan><tspan x="430" fill="#3fb950">installed</tspan></text>
+    <text y="240" fill="#e6edf3"><tspan x="20">bob</tspan><tspan x="240">Claude Bob</tspan><tspan x="430" fill="#3fb950">installed</tspan></text>
+    <text y="262" fill="#e6edf3"><tspan x="20">work01</tspan><tspan x="240">Claude Work 01</tspan><tspan x="430" fill="#3fb950">installed</tspan></text>
+    <text y="284" fill="#e6edf3"><tspan x="20">work02</tspan><tspan x="240">Claude Work 02</tspan><tspan x="430" fill="#d29922">missing</tspan></text>
+    <text y="306" fill="#e6edf3"><tspan x="20">research</tspan><tspan x="240">Claude Research</tspan><tspan x="430" fill="#9198a1">not created</tspan></text>
+
+    <text x="20" y="338"><tspan fill="#3fb950">$</tspan> claude-chrome setup work02<tspan fill="#9198a1" dx="16"># opens its Chrome on the extension page</tspan></text>
+  </g>
+</svg>

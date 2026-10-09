@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claude-chrome: Claude in Chrome with multiple Claude accounts on macOS</title>
+<meta name="description" content="A small open-source macOS script that gives each Claude Desktop account its own Chrome profile, so Claude in Chrome connects to the right browser without signing the extension in and out.">
+<link rel="canonical" href="https://lcbasu.github.io/claude-chrome/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="claude-chrome: one Chrome profile per Claude account">
+<meta property="og:description" content="Use Claude in Chrome with several Claude Desktop accounts on one Mac. brew install lcbasu/tap/claude-chrome && claude-chrome">
+<meta property="og:url" content="https://lcbasu.github.io/claude-chrome/">
+<meta name="color-scheme" content="light dark">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  "name": "claude-chrome",
+  "description": "Gives each Claude Desktop account its own Chrome profile so Claude in Chrome connects to the right browser. Companion to Claude Profiles.",
+  "codeRepository": "https://github.com/lcbasu/claude-chrome",
+  "programmingLanguage": "Bash",
+  "runtimePlatform": "macOS",
+  "license": "https://opensource.org/licenses/MIT",
+  "version": "0.3.0",
+  "author": {"@type": "Person", "name": "Lokesh Basu", "url": "https://github.com/lcbasu"}
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Can I use Claude in Chrome with more than one Claude account at the same time?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Yes, with one Chrome profile per account. Each profile's Claude extension stays signed into its own account, and each Claude Desktop instance connects to the profile signed into its account."}},
+    {"@type": "Question", "name": "Why does Claude in Chrome connect to the wrong Chrome profile?",
+     "acceptedAnswer": {"@type": "Answer", "text": "A Claude instance can see every Chrome profile whose extension is signed into its account. If more than one is signed in and none is paired, or a different one was paired earlier, it can pick one you didn't intend. Pairing once with switch browser, then Connect, fixes the choice."}},
+    {"@type": "Question", "name": "What does \"local pairing disabled for this launch: userData relocated\" mean?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Claude Desktop writes this when it runs with a custom --user-data-dir, as multi-account launchers do. In that mode it doesn't use the local connection to Chrome; it uses the hosted bridge, which matches by Claude account."}},
+    {"@type": "Question", "name": "Why does Claude keep asking which browser to use?",
+     "acceptedAnswer": {"@type": "Answer", "text": "More than one browser signed into the same Claude account is connected, and none is saved as paired. Pair once, or sign the extra one out."}}
+  ]
+}
+</script>
+<style>
+  :root { --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --line: #d0d7de; --code: #f6f8fa; --link: #0969da; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --line: #30363d; --code: #161b22; --link: #4493f8; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 30px; line-height: 1.25; margin: 0 0 12px; }
+  h2 { font-size: 21px; margin: 40px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 24px 0 4px; }
+  p, li { color: var(--fg); }
+  .lead { font-size: 18px; color: var(--muted); }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+  img { max-width: 100%; height: auto; display: block; margin: 20px 0; }
+  a { color: var(--link); }
+  footer { margin-top: 48px; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Claude in Chrome with several Claude accounts, each in its own Chrome profile</h1>
+  <p class="lead">A small macOS script for people who run several Claude Desktop accounts side by side and keep finding Claude in Chrome attached to the wrong browser.</p>
+
+  <pre><code>brew install lcbasu/tap/claude-chrome &amp;&amp; claude-chrome</code></pre>
+
+  <p>It gives each Claude account its own Chrome profile and opens that profile whenever its Claude launches. Profiles you add later are set up automatically. In each new Chrome window, two clicks are left to you: <strong>Add to Chrome</strong>, then sign the extension into that account.</p>
+
+  <img src="how-it-works.svg" width="880" height="400" alt="Before: three Claude accounts share one Chrome profile and the wrong session gets the browser. After: each Claude account has its own Chrome profile.">
+
+  <h2>Why it happens</h2>
+  <p>This is what I observed in Claude Desktop's logs and code. It isn't documented by Anthropic and may change.</p>
+  <ul>
+    <li>A Claude Desktop instance started with <code>--user-data-dir</code>, as multi-account launchers such as <a href="https://github.com/jyito/Claude-Profiles">Claude Profiles</a> do, logs <code>local pairing disabled for this launch: userData relocated</code>. It then reaches Chrome only through Anthropic's hosted bridge, which matches by Claude account.</li>
+    <li>A Chrome profile has one Claude extension, signed into one account at a time.</li>
+    <li>So sharing one Chrome profile between accounts means signing the extension in and out every time you switch.</li>
+  </ul>
+
+  <h2>Questions</h2>
+  <h3>Can I use Claude in Chrome with more than one Claude account at the same time?</h3>
+  <p>Yes, with one Chrome profile per account. Each profile's Claude extension stays signed into its own account, and each Claude Desktop instance connects to the profile signed into its account.</p>
+  <h3>Why does Claude in Chrome connect to the wrong Chrome profile?</h3>
+  <p>A Claude instance can see every Chrome profile whose extension is signed into its account. If more than one is signed in and none is paired, or a different one was paired earlier, it can pick one you didn't intend. Pairing once with switch browser, then Connect, fixes the choice.</p>
+  <h3>What does "local pairing disabled for this launch: userData relocated" mean?</h3>
+  <p>Claude Desktop writes this when it runs with a custom --user-data-dir, as multi-account launchers do. In that mode it doesn't use the local connection to Chrome; it uses the hosted bridge, which matches by Claude account.</p>
+  <h3>Why does Claude keep asking which browser to use?</h3>
+  <p>More than one browser signed into the same Claude account is connected, and none is saved as paired. Pair once, or sign the extra one out.</p>
+
+  <p>Full documentation, source and tests: <a href="https://github.com/lcbasu/claude-chrome">github.com/lcbasu/claude-chrome</a>.</p>
+
+  <footer>MIT licensed. An independent script, not affiliated with Anthropic or Google. Thanks to <a href="https://github.com/jyito">jyito</a> for Claude Profiles.</footer>
+</main>
+</body>
+</html>

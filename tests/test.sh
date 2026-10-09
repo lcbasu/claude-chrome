@@ -12,6 +12,10 @@ export CLAUDE_CHROME_INSTANCES_DIR="$T/instances"
 export CLAUDE_CHROME_APPS_DIR="$T/Applications"
 export CLAUDE_CHROME_DATA="$T/Chrome"
 export CLAUDE_CHROME_OPEN="$T/open-stub"
+export CLAUDE_CHROME_LAUNCHCTL="$T/launchctl-stub"
+export CLAUDE_CHROME_AGENTS_DIR="$T/LaunchAgents"
+export CLAUDE_CHROME_APP="$T/Google Chrome.app"
+LAUNCHCTL_LOG="$T/launchctl.log"
 OPEN_LOG="$T/open.log"
 
 pass=0 fail=0
@@ -23,6 +27,9 @@ check() {  # $1 description, rest: command that must succeed
 
 printf '#!/bin/bash\nprintf "%%s\\n" "$*" >> "%s"\n' "$OPEN_LOG" > "$CLAUDE_CHROME_OPEN"
 chmod +x "$CLAUDE_CHROME_OPEN"
+printf '#!/bin/bash\nprintf "%%s\\n" "$*" >> "%s"\n' "$LAUNCHCTL_LOG" > "$CLAUDE_CHROME_LAUNCHCTL"
+chmod +x "$CLAUDE_CHROME_LAUNCHCTL"
+mkdir -p "$CLAUDE_CHROME_APP"
 mkdir -p "$CLAUDE_CHROME_DATA"
 
 make_wrapper() {  # $1 slug, $2 display name — mirrors the Claude Profiles launcher layout
@@ -47,6 +54,10 @@ LAUNCHER
     chmod +x "$app/Contents/MacOS/launcher"
 }
 
+# one-command setup: no profiles yet -> friendly message, nothing installed
+check "setup with no profiles explains what to do" sh -c "'$CLI' | grep -q 'No Claude Profiles apps found'"
+check "setup with no profiles installs no agent" test ! -f "$CLAUDE_CHROME_AGENTS_DIR/io.github.lcbasu.claude-chrome.plist"
+rm -f "$CLAUDE_CHROME_INSTANCES_DIR/chrome-map.tsv"
 make_wrapper alice "Claude Alice"
 make_wrapper work01 "Claude Work 01"
 mkdir -p "$CLAUDE_CHROME_APPS_DIR/Unrelated.app/Contents/MacOS"   # must be ignored
@@ -106,6 +117,36 @@ check "hook opens the slug's Chrome profile" grep -q 'profile-directory=Claude a
 "$CLI" uninstall >/dev/null
 check "uninstall removes every hook" sh -c "! grep -q 'claude-chrome hook' '$CLAUDE_CHROME_APPS_DIR'/*/Contents/MacOS/launcher"
 check "uninstall restores a valid launcher" bash -n "$L_ALICE"
+
+# one-command setup on a fresh machine
+"$CLI" uninstall >/dev/null
+rm -rf "$CLAUDE_CHROME_INSTANCES_DIR" "$CLAUDE_CHROME_DATA" && mkdir -p "$CLAUDE_CHROME_DATA"
+: > "$OPEN_LOG"
+UP_OUT=$("$CLI")
+AGENT="$CLAUDE_CHROME_AGENTS_DIR/io.github.lcbasu.claude-chrome.plist"
+check "setup maps every profile" test "$(grep -vc '^#' "$CLAUDE_CHROME_INSTANCES_DIR/chrome-map.tsv")" -eq 2
+check "setup hooks every launcher" test "$(grep -l 'claude-chrome hook' "$CLAUDE_CHROME_APPS_DIR"/*/Contents/MacOS/launcher | wc -l)" -eq 2
+check "setup writes the auto-sync agent" grep -q '<string>sync</string>' "$AGENT"
+check "agent watches the apps folder" grep -q "<string>$CLAUDE_CHROME_APPS_DIR</string>" "$AGENT"
+check "setup loads the agent" grep -q "^bootstrap gui/$(id -u) $AGENT" "$LAUNCHCTL_LOG"
+check "setup opens Chrome for each profile missing the extension" test "$(grep -c chromewebstore "$OPEN_LOG")" -eq 2
+check "setup tells the user what to click" sh -c "printf '%s' \"\$1\" | grep -q 'Add to Chrome'" _ "$UP_OUT"
+mkdir -p "$CLAUDE_CHROME_DATA/Claude alice/Extensions/fcoeoabgfenejglbffodgkkbkcdhcgfn" \
+         "$CLAUDE_CHROME_DATA/Claude work01/Extensions/fcoeoabgfenejglbffodgkkbkcdhcgfn"
+: > "$OPEN_LOG"
+check "re-running setup when done reports all set" sh -c "'$CLI' | grep -q 'All set'"
+check "re-running setup opens nothing" test ! -s "$OPEN_LOG"
+
+# sync: a profile added later is mapped and hooked silently
+make_wrapper research "Claude Research"
+check "sync is silent" test -z "$("$CLI" sync)"
+check "sync maps the new profile" grep -q '^research' "$CLAUDE_CHROME_INSTANCES_DIR/chrome-map.tsv"
+check "sync hooks the new launcher" grep -q 'claude-chrome hook' "$CLAUDE_CHROME_APPS_DIR/Claude Research.app/Contents/MacOS/launcher"
+
+# uninstall removes the agent too
+"$CLI" uninstall >/dev/null
+check "uninstall removes the agent" test ! -f "$AGENT"
+check "uninstall unloads the agent" grep -q "^bootout gui/$(id -u)/io.github.lcbasu.claude-chrome" "$LAUNCHCTL_LOG"
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

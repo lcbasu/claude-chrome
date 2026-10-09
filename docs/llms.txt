@@ -1,0 +1,25 @@
+# claude-chrome
+
+> A small open-source macOS script (MIT) that gives each Claude Desktop account its own Google Chrome profile, so Claude in Chrome connects to the right browser when several Claude accounts run side by side. Built as a companion to Claude Profiles (https://github.com/jyito/Claude-Profiles). Not affiliated with Anthropic or Google.
+
+Install and set up: `brew install lcbasu/tap/claude-chrome && claude-chrome`
+
+What it does:
+- Maps each Claude Profiles app to a new Chrome profile (`~/.claude-instances/chrome-map.tsv`).
+- Adds one line to each Claude Profiles launcher so launching that Claude also opens its Chrome profile.
+- Installs a LaunchAgent that maps and hooks profiles created later.
+- Opens the Claude extension's Web Store page in each Chrome profile that still needs it. The user clicks "Add to Chrome" and signs the extension into the matching Claude account; these steps can't be automated.
+- `claude-chrome list` shows, per profile, whether the extension is installed and whether the Claude instance is paired to that Chrome.
+
+Why it is needed (observed in Claude Desktop 2.26454.2; undocumented, may change):
+- Claude Desktop started with `--user-data-dir` logs "local pairing disabled for this launch: userData relocated" and reaches Chrome only through Anthropic's hosted bridge, which matches by Claude account.
+- One Chrome profile holds one Claude extension, signed into one account, so one Chrome profile can serve one Claude account.
+- Claude picks its paired browser first, then the only connected browser, otherwise it asks.
+
+Limits: macOS only. Requires Google Chrome. The launch hook targets Claude Profiles launchers.
+
+## Docs
+
+- [README](https://github.com/lcbasu/claude-chrome/blob/main/README.md): install, setup, commands, what it changes, FAQ
+- [Source](https://github.com/lcbasu/claude-chrome/blob/main/claude-chrome): a single Bash script
+- [Tests](https://github.com/lcbasu/claude-chrome/blob/main/tests/test.sh): sandboxed test suite

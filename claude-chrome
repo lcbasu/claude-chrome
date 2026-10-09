@@ -9,22 +9,30 @@
 # account, signed in once, opened automatically next to its Claude instance.
 #
 # Usage:
+#   claude-chrome                  set everything up (safe to re-run): map, hook,
+#                                  auto-sync agent, and open Chrome where the
+#                                  Claude extension still needs installing
 #   claude-chrome init             add a map row for every Claude Profiles app
 #   claude-chrome list             show the map, extension and pairing status
 #   claude-chrome open <slug>      open that profile's Chrome window
 #   claude-chrome setup <slug>     open it on the Claude extension's store page
 #   claude-chrome setup-all        the same, for every mapped profile
 #   claude-chrome install          hook every Claude Profiles launcher
-#   claude-chrome uninstall        remove the hooks
+#   claude-chrome sync             init + install, quietly (run by the agent)
+#   claude-chrome uninstall        remove the hooks and the agent
 set -u
 
-VERSION="0.2.0"
+VERSION="0.3.0"
 INSTANCES_DIR="${CLAUDE_CHROME_INSTANCES_DIR:-$HOME/.claude-instances}"
 MAP="${CLAUDE_CHROME_MAP:-$INSTANCES_DIR/chrome-map.tsv}"
 APPS_DIR="${CLAUDE_CHROME_APPS_DIR:-$HOME/Applications}"
 CHROME_APP="${CLAUDE_CHROME_APP:-/Applications/Google Chrome.app}"
 CHROME_DATA="${CLAUDE_CHROME_DATA:-$HOME/Library/Application Support/Google/Chrome}"
 OPEN_BIN="${CLAUDE_CHROME_OPEN:-/usr/bin/open}"
+LAUNCHCTL="${CLAUDE_CHROME_LAUNCHCTL:-/bin/launchctl}"
+AGENTS_DIR="${CLAUDE_CHROME_AGENTS_DIR:-$HOME/Library/LaunchAgents}"
+AGENT_LABEL="io.github.lcbasu.claude-chrome"
+AGENT_PLIST="$AGENTS_DIR/$AGENT_LABEL.plist"
 BUNDLE_ID_PREFIX="local.claude-profiles"
 EXT_ID="fcoeoabgfenejglbffodgkkbkcdhcgfn"
 EXT_URL="https://chromewebstore.google.com/detail/claude/$EXT_ID"
@@ -92,7 +100,7 @@ cmd_init() {
         printf '%s\tClaude %s\t%s\n' "$slug" "$slug" "$name" >> "$MAP"
         added=$((added + 1))
     done
-    printf 'added %d profile(s) to %s\n' "$added" "$MAP"
+    [ -n "${QUIET:-}" ] || printf 'added %d profile(s) to %s\n' "$added" "$MAP"
 }
 
 paired_device() {  # deviceId this Claude instance saved via Connect, or nothing
@@ -150,7 +158,7 @@ cmd_install() {
     done <<EOF
 $(launchers)
 EOF
-    printf 'hooked %d launcher(s)\n' "$n"
+    [ -n "${QUIET:-}" ] || printf 'hooked %d launcher(s)\n' "$n"
 }
 
 cmd_uninstall() {
@@ -168,14 +176,82 @@ EOF
     printf 'unhooked %d launcher(s)\n' "$n"
 }
 
+xml_escape() { printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+
+agent_install() {  # re-sync whenever ~/Applications changes, so new profiles get set up
+    local self
+    self=$(self_path)
+    mkdir -p "$AGENTS_DIR"
+    cat > "$AGENT_PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key><string>$AGENT_LABEL</string>
+	<key>ProgramArguments</key>
+	<array><string>$(xml_escape "$self")</string><string>sync</string></array>
+	<key>WatchPaths</key>
+	<array><string>$(xml_escape "$APPS_DIR")</string></array>
+	<key>RunAtLoad</key><true/>
+	<key>ThrottleInterval</key><integer>10</integer>
+</dict>
+</plist>
+PLIST
+    "$LAUNCHCTL" bootout "gui/$(id -u)/$AGENT_LABEL" >/dev/null 2>&1
+    "$LAUNCHCTL" bootstrap "gui/$(id -u)" "$AGENT_PLIST" >/dev/null 2>&1 \
+        || printf 'note: could not load the auto-sync agent; re-run claude-chrome after adding profiles\n' >&2
+}
+
+agent_remove() {
+    [ -f "$AGENT_PLIST" ] || return 0
+    "$LAUNCHCTL" bootout "gui/$(id -u)/$AGENT_LABEL" >/dev/null 2>&1
+    rm -f "$AGENT_PLIST"
+    printf 'removed the auto-sync agent\n'
+}
+
+cmd_sync() { QUIET=1 cmd_init; QUIET=1 cmd_install; }
+
+cmd_up() {
+    local slug dir name pending=0
+    [ -d "$CHROME_APP" ] || die "Google Chrome not found at $CHROME_APP"
+    cmd_init
+    if [ -z "$(map_rows 2>/dev/null)" ]; then
+        printf '\nNo Claude Profiles apps found in %s.\n' "$APPS_DIR"
+        printf 'Create your profiles in Claude Profiles (https://github.com/jyito/Claude-Profiles), then run claude-chrome again.\n'
+        return 0
+    fi
+    cmd_install
+    agent_install
+    while IFS=$'\t' read -r slug dir name; do
+        [ -d "$CHROME_DATA/$dir/Extensions/$EXT_ID" ] && continue
+        open_profile "$slug" "$EXT_URL"
+        pending=$((pending + 1))
+        sleep 1  # let Chrome settle between profile launches
+    done <<EOF
+$(map_rows)
+EOF
+    printf '\n'
+    cmd_list
+    if [ "$pending" -gt 0 ]; then
+        printf '\nOpened %d Chrome window(s). In each one:\n' "$pending"
+        printf '  1. Click "Add to Chrome".\n'
+        printf '  2. Sign the extension into the Claude account named on the window.\n'
+        printf 'Run claude-chrome again any time to check.\n'
+    else
+        printf '\nAll set. Each Claude profile now opens its own Chrome.\n'
+    fi
+}
+
 case "${1:-}" in
+    "")        cmd_up ;;
+    sync)      cmd_sync ;;
     init)      cmd_init ;;
     list)      cmd_list ;;
     open)      open_profile "${2:?usage: claude-chrome open <slug>}" ;;
     setup)     open_profile "${2:?usage: claude-chrome setup <slug>}" "$EXT_URL" ;;
     setup-all) cmd_setup_all ;;
     install)   cmd_install ;;
-    uninstall) cmd_uninstall ;;
+    uninstall) cmd_uninstall; agent_remove ;;
     version|--version|-v) printf '%s\n' "$VERSION" ;;
-    *) sed -n '/^# Usage:/,/^set -u/p' "$0" | sed -e '$d' -e 's/^# \{0,1\}//'; [ $# -eq 0 ] || [ "$1" = help ] || [ "$1" = --help ] || exit 2 ;;
+    *) sed -n '/^# Usage:/,/^set -u/p' "$0" | sed -e '$d' -e 's/^# \{0,1\}//'; [ "$1" = help ] || [ "$1" = --help ] || [ "$1" = -h ] || exit 2 ;;
 esac
